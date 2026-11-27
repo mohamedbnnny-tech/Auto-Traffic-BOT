@@ -118,24 +118,26 @@ if __name__ == "__main__":
     all_keywords = fetch_live_trends()
     selected = random.sample(all_keywords, min(8, len(all_keywords)))
     published_items = []
-
-    try:
-        token = create_telegraph_account()
-    except Exception:
-        token = None
-
     for idx, kw in enumerate(selected):
+        t_link = None
         if token:
             t_link = publish_telegraph(token, kw)
-            if t_link:
-                published_items.append((kw, t_link))
-                with open("published_links.txt", "a", encoding="utf-8") as f:
-                    f.write(t_link + "\n")
-        # Generate 3 PDFs per run to keep repository lightweight
+        
+        # Fallback to paste.rs if telegra.ph fails so feed.xml is always populated
+        if not t_link:
+            res = requests.post("https://paste.rs", data=f"{kw.upper()}\n\n{WORKER_REDIRECT_URL}\n".encode("utf-8"), timeout=15)
+            if res.status_code in:
+                t_link = res.text.strip()
+
+        if t_link:
+            published_items.append((kw, t_link))
+            with open("published_links.txt", "a", encoding="utf-8") as f:
+                f.write(t_link + "\n")
+
         if idx < 3:
             generate_pdf(kw, idx)
         time.sleep(2)
 
-    if published_items:
-        update_rss_feed(published_items)
-        print(f"Generated {len(published_items)} pages, RSS feed, and PDFs successfully!")
+    update_rss_feed(published_items)
+    print(f"Generated {len(published_items)} pages, RSS feed, and PDFs successfully!")
+
