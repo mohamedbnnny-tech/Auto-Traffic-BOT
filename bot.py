@@ -126,7 +126,7 @@ if __name__ == "__main__":
         # Fallback to paste.rs if telegra.ph fails so feed.xml is always populated
         if not t_link:
             res = requests.post("https://paste.rs", data=f"{kw.upper()}\n\n{WORKER_REDIRECT_URL}\n".encode("utf-8"), timeout=15)
-            if res.status_code in:
+            if res.status_code in [200, 201]:
                 t_link = res.text.strip()
 
         if t_link:
