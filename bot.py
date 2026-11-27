@@ -24,7 +24,6 @@ EVERGREEN_KEYWORDS = [
     "Free Steam Gift Card Codes Generator 2026"
 ]
 
-# 1. Fetch Live Trending Keywords (US, UK, CA, FR)
 def fetch_live_trends():
     geos = ["US", "GB", "CA", "FR"]
     trends = []
@@ -43,7 +42,6 @@ def fetch_live_trends():
             continue
     return trends if trends else EVERGREEN_KEYWORDS
 
-# 2. Publish Instant Page on Telegra.ph
 def create_telegraph_account():
     res = requests.get(
         "https://telegra.ph",
@@ -57,7 +55,7 @@ def publish_telegraph(token, kw):
         {"tag": "p", "children": [f"Access {kw} directly through our verified high-speed resource server without delays."]},
         {"tag": "h4", "children": ["Verified Direct Access"]},
         {"tag": "p", "children": [
-            {"tag": "a", "attrs": {"href": WORKER_REDIRECT_URL}, "children": [f"👉 CLICK HERE TO ACCESS: {kw.upper()} 👈"]}
+            {"tag": "a", "attrs": {"href": WORKER_REDIRECT_URL}, "children": [f"CLICK HERE TO ACCESS: {kw.upper()}"]}
         ]}
     ]
     res = requests.post(
@@ -69,7 +67,6 @@ def publish_telegraph(token, kw):
         return res["result"]["url"]
     return None
 
-# 3. Generate SEO PDF File for Scribd / SlideShare
 def generate_pdf(kw, index):
     os.makedirs("pdfs", exist_ok=True)
     pdf = FPDF()
@@ -88,7 +85,6 @@ def generate_pdf(kw, index):
     filename = f"pdfs/resource_{int(time.time())}_{index}.pdf"
     pdf.output(filename)
 
-# 4. Generate RSS Feed (feed.xml) for Flipboard
 def update_rss_feed(items):
     rss_items = ""
     pub_date = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S +0000")
@@ -118,16 +114,27 @@ if __name__ == "__main__":
     all_keywords = fetch_live_trends()
     selected = random.sample(all_keywords, min(8, len(all_keywords)))
     published_items = []
+
+    try:
+        token = create_telegraph_account()
+    except Exception:
+        token = None
+
     for idx, kw in enumerate(selected):
         t_link = None
         if token:
-            t_link = publish_telegraph(token, kw)
+            try:
+                t_link = publish_telegraph(token, kw)
+            except Exception:
+                t_link = None
         
-        # Fallback to paste.rs if telegra.ph fails so feed.xml is always populated
         if not t_link:
-            res = requests.post("https://paste.rs", data=f"{kw.upper()}\n\n{WORKER_REDIRECT_URL}\n".encode("utf-8"), timeout=15)
-            if res.status_code in [200, 201]:
-                t_link = res.text.strip()
+            try:
+                res = requests.post("https://paste.rs", data=f"{kw.upper()}\n\n{WORKER_REDIRECT_URL}\n".encode("utf-8"), timeout=15)
+                if res.status_code == 200 or res.status_code == 201:
+                    t_link = res.text.strip()
+            except Exception:
+                pass
 
         if t_link:
             published_items.append((kw, t_link))
@@ -140,4 +147,3 @@ if __name__ == "__main__":
 
     update_rss_feed(published_items)
     print(f"Generated {len(published_items)} pages, RSS feed, and PDFs successfully!")
-
