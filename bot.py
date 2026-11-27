@@ -51,7 +51,7 @@ def publish_telegraph(token, kw):
 def publish_paste(kw):
     text = f"{kw.upper()}\n\nDirect Access Link:\n{WORKER_REDIRECT_URL}\n"
     res = requests.post("https://paste.rs", data=text.encode("utf-8"), timeout=15)
-    if res.status_code in:
+    if res.status_code in [200, 201]:
         return res.text.strip()
     return None
 
