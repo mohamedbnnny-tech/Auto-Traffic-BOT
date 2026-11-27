@@ -1,0 +1,36 @@
+name: Cloud Traffic Bot
+
+on:
+  schedule:
+    # Runs automatically every hour
+    - cron: '0 * * * *'
+  workflow_dispatch: # Allows manual run anytime with 1 click
+
+permissions:
+  contents: write
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run Traffic Bot
+        run: python bot.py
+
+      - name: Save generated links
+        run: |
+          git config --global user.name "AutoBot"
+          git config --global user.email "bot@://github.com"
+          git add published_links.txt
+          git commit -m "Update generated links" || exit 0
+          git push
