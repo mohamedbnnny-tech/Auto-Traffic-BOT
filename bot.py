@@ -42,29 +42,19 @@ def fetch_live_trends():
             continue
     return trends if trends else EVERGREEN_KEYWORDS
 
-def create_telegraph_account():
-    res = requests.get(
-        "https://telegra.ph",
-        params={"short_name": f"Hub_{random.randint(1000,9999)}", "author_name": "Global Trends Hub"},
-        headers=HEADERS, timeout=15
-    ).json()
-    return res["result"]["access_token"]
-
-def publish_telegraph(token, kw):
-    content = [
-        {"tag": "p", "children": [f"Access {kw} directly through our verified high-speed resource server without delays."]},
-        {"tag": "h4", "children": ["Verified Direct Access"]},
-        {"tag": "p", "children": [
-            {"tag": "a", "attrs": {"href": WORKER_REDIRECT_URL}, "children": [f"CLICK HERE TO ACCESS: {kw.upper()}"]}
-        ]}
-    ]
-    res = requests.post(
-        "https://telegra.ph",
-        json={"access_token": token, "title": kw, "content": content},
-        headers=HEADERS, timeout=15
-    ).json()
-    if res.get("ok"):
-        return res["result"]["url"]
+def publish_dpaste(kw):
+    try:
+        content = f"# {kw}\n\nGet instant verified access and live updates without delays:\n\nDirect Access Link:\n{WORKER_REDIRECT_URL}\n"
+        res = requests.post(
+            "https://dpaste.org",
+            data={"content": content, "syntax": "text", "expiry_days": 30},
+            headers={"User-Agent": HEADERS["User-Agent"]},
+            timeout=15
+        )
+        if res.status_code == 200:
+            return res.text.strip().strip('"')
+    except Exception:
+        pass
     return None
 
 def generate_pdf(kw, index):
@@ -115,35 +105,16 @@ if __name__ == "__main__":
     selected = random.sample(all_keywords, min(8, len(all_keywords)))
     published_items = []
 
-    try:
-        token = create_telegraph_account()
-    except Exception:
-        token = None
-
     for idx, kw in enumerate(selected):
-        t_link = None
-        if token:
-            try:
-                t_link = publish_telegraph(token, kw)
-            except Exception:
-                t_link = None
-        
-        if not t_link:
-            try:
-                res = requests.post("https://paste.rs", data=f"{kw.upper()}\n\n{WORKER_REDIRECT_URL}\n".encode("utf-8"), timeout=15)
-                if res.status_code == 200 or res.status_code == 201:
-                    t_link = res.text.strip()
-            except Exception:
-                pass
-
-        if t_link:
-            published_items.append((kw, t_link))
+        link = publish_dpaste(kw)
+        if link:
+            published_items.append((kw, link))
             with open("published_links.txt", "a", encoding="utf-8") as f:
-                f.write(t_link + "\n")
-
+                f.write(link + "\n")
         if idx < 3:
             generate_pdf(kw, idx)
         time.sleep(2)
 
-    update_rss_feed(published_items)
-    print(f"Generated {len(published_items)} pages, RSS feed, and PDFs successfully!")
+    if published_items:
+        update_rss_feed(published_items)
+        print(f"Generated {len(published_items)} pages, RSS feed, and PDFs successfully!")
