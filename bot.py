@@ -7,10 +7,10 @@ from datetime import datetime, timezone
 from fpdf import FPDF
 
 WORKER_REDIRECT_URL = "https://workers.dev"
+GITHUB_PAGES_BASE = "https://github.io"
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36",
-    "Accept": "application/json"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36"
 }
 
 EVERGREEN_KEYWORDS = [
@@ -42,20 +42,39 @@ def fetch_live_trends():
             continue
     return trends if trends else EVERGREEN_KEYWORDS
 
-def publish_dpaste(kw):
-    try:
-        content = f"# {kw}\n\nGet instant verified access and live updates without delays:\n\nDirect Access Link:\n{WORKER_REDIRECT_URL}\n"
-        res = requests.post(
-            "https://dpaste.org",
-            data={"content": content, "syntax": "text", "expiry_days": 30},
-            headers={"User-Agent": HEADERS["User-Agent"]},
-            timeout=15
-        )
-        if res.status_code == 200:
-            return res.text.strip().strip('"')
-    except Exception:
-        pass
-    return None
+def create_html_page(kw, index):
+    os.makedirs("posts", exist_ok=True)
+    slug = f"post-{int(time.time())}-{index}.html"
+    filepath = f"posts/{slug}"
+    
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{kw}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; background: #f4f6f9; color: #222; text-align: center; padding: 40px 20px; }}
+        .card {{ max-width: 650px; margin: auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }}
+        h1 {{ font-size: 24px; color: #111; margin-bottom: 15px; }}
+        p {{ font-size: 16px; color: #555; line-height: 1.6; }}
+        .btn {{ display: inline-block; margin-top: 25px; padding: 16px 32px; background: #0066ff; color: #fff; text-decoration: none; font-size: 18px; font-weight: bold; border-radius: 8px; }}
+        .btn:hover {{ background: #0052cc; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>{kw}</h1>
+        <p>Access the verified 2026 high-speed resource, live stream, and direct download server below without surveys or delays.</p>
+        <a class="btn" href="{WORKER_REDIRECT_URL}">👉 CLICK HERE FOR DIRECT ACCESS 👈</a>
+        <p style="font-size: 12px; color: #888; margin-top: 30px;">Server status: Online | Updated automatically</p>
+    </div>
+</body>
+</html>"""
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(html_content)
+        
+    return f"{GITHUB_PAGES_BASE}/{filepath}"
 
 def generate_pdf(kw, index):
     os.makedirs("pdfs", exist_ok=True)
@@ -66,14 +85,12 @@ def generate_pdf(kw, index):
     pdf.multi_cell(0, 10, f"Complete Resource Guide:\n{safe_kw}", align="C")
     pdf.ln(10)
     pdf.set_font("Arial", "", 12)
-    pdf.multi_cell(0, 8, "Thank you for downloading this resource document. Our servers are updated hourly to provide fast, direct access to trending files, streams, and guides.")
+    pdf.multi_cell(0, 8, "Click the button below for immediate access to the full resource and live updates.")
     pdf.ln(15)
     pdf.set_font("Arial", "B", 14)
     pdf.set_text_color(0, 0, 255)
-    pdf.cell(0, 10, ">>> CLICK HERE FOR DIRECT ACCESS & DOWNLOAD <<<", ln=True, align="C", link=WORKER_REDIRECT_URL)
-    
-    filename = f"pdfs/resource_{int(time.time())}_{index}.pdf"
-    pdf.output(filename)
+    pdf.cell(0, 10, ">>> CLICK HERE FOR DIRECT ACCESS <<<", ln=True, align="C", link=WORKER_REDIRECT_URL)
+    pdf.output(f"pdfs/resource_{int(time.time())}_{index}.pdf")
 
 def update_rss_feed(items):
     rss_items = ""
@@ -92,7 +109,7 @@ def update_rss_feed(items):
 <rss version="2.0">
 <channel>
     <title>Global Trending Resources Hub</title>
-    <link>{WORKER_REDIRECT_URL}</link>
+    <link>{GITHUB_PAGES_BASE}</link>
     <description>Hourly updated trending guides, streams, and direct resources.</description>
     {rss_items}
 </channel>
@@ -106,15 +123,12 @@ if __name__ == "__main__":
     published_items = []
 
     for idx, kw in enumerate(selected):
-        link = publish_dpaste(kw)
-        if link:
-            published_items.append((kw, link))
-            with open("published_links.txt", "a", encoding="utf-8") as f:
-                f.write(link + "\n")
+        page_url = create_html_page(kw, idx)
+        published_items.append((kw, page_url))
+        with open("published_links.txt", "a", encoding="utf-8") as f:
+            f.write(page_url + "\n")
         if idx < 3:
             generate_pdf(kw, idx)
-        time.sleep(2)
 
-    if published_items:
-        update_rss_feed(published_items)
-        print(f"Generated {len(published_items)} pages, RSS feed, and PDFs successfully!")
+    update_rss_feed(published_items)
+    print(f"Generated {len(published_items)} HTML pages, RSS feed, and PDFs successfully!")
