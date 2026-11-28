@@ -9,6 +9,7 @@ from fpdf import FPDF
 WORKER_REDIRECT_URL = "https://workers.dev"
 GITHUB_PAGES_BASE = "https://github.io"
 
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36"
 }
